@@ -6,32 +6,31 @@
 #define DEFAULT_WIDTH 640
 #define DEFAULT_HEIGHT 480
 #define DEFAULT_MAX_ITER 200
+#define X_LENGTH 3.0
+#define Y_LENGTH 2.0
 
 
-void mandelbrot(unsigned*, int, int, int, double, double, double);
+void mandelbrot(void*, int, int, int, double, double, double, double);
 
 SDL_Surface *screen;
-
-void render(int width, int height, SDL_Surface * surface) {
-	for (int i = 0; i< height; i++)
-		for (int j = 0; j<width; j++)
-			((unsigned int*)surface->pixels)[i*width+j] = 0x00ff0000;
-}
-
 
 // Entry point
 int main(int argc, char *argv[]) {
 	int width, height, max_iter = DEFAULT_MAX_ITER;
-	double re_start = -2.0, im_start = 1.0, scale = 1.0;
-	if (argc == 3){
+	double x_start = -2.0, y_start = 1.0, dx, dy, scale = 1.0;
+	if (argc == 4){
 		width = atoi(argv[1]);
 		height = atoi(argv[2]);
-	}else{
+		max_iter = atoi(argv[3]);
+	}else if(argc == 1){
 		width = DEFAULT_WIDTH;
 		height = DEFAULT_HEIGHT;
+		max_iter = DEFAULT_MAX_ITER;
+	}else{
+		printf("Usage: %s window's_width window's_height max_iterations\n", argv[0]);
+		printf("\tor just with default parameters (640, 480, 200): %s \n", argv[0]);
+		return 0;
 	}
-	
-
 
 	// Initialize SDL's subsystems - in this case, only video.
 	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
@@ -47,19 +46,19 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "Unable to set 640x480 video: %s\n", SDL_GetError());
 		exit(1);
 	}
-
+	
+	// calc value of single step for x and y
+	dx = X_LENGTH/width/scale;
+	dy = Y_LENGTH/height/scale;
+	printf("%lf %lf\n", dx, dy);
 	//test of asm func
-	mandelbrot(screen->pixels, width, height, max_iter, re_start, im_start, scale);
+	mandelbrot(screen->pixels, width, height, max_iter, x_start, y_start, dx, dy);
 
 	bool run = true;
 	SDL_Event event;
 	// Main loop: loop forever.
 	while (run) {
-		// Render stuff
-		render(width, height, screen); 
-
 		// Poll for events, and handle the ones we care about.
-		
 		SDL_PollEvent(&event); 
 			switch (event.type) {
 				case SDL_KEYDOWN:
@@ -73,6 +72,7 @@ int main(int argc, char *argv[]) {
 					run = false;
 					break;
 			}
+		//mandelbrot(screen->pixels, width, height, max_iter, x_start, y_start, dx, dy);
 		SDL_Flip(screen);
 	}
 	SDL_Quit();
