@@ -64,50 +64,45 @@ loop_y:
 	mov 	ecx, width ;
 	movsd 	xmm0, x_start
 
-	loop_x:
-		xorpd 	xmm2, xmm2 ; x = 0
-		xorpd 	xmm3, xmm3 ; y = 0
- 		mov 	dword iterations, 0x0000 ; iter = 0
+loop_x:
+	xorpd 	xmm2, xmm2 ; x = 0
+	xorpd 	xmm3, xmm3 ; y = 0
+	mov 	dword iterations, 0x0000 ; iter = 0
 
- 		main_loop:
- 			movsd 	xmm7, x_step
-
- 			movsd 	xmm4, xmm2 ;
- 			mulsd 	xmm4, xmm4 ; x*x
- 			movsd 	xmm5, xmm3
- 			mulsd 	xmm5, xmm5 ; y*y
- 			movsd 	xmm6, xmm4 ; xtemp = x*x
- 			subsd 	xmm6, xmm5 ; xtemp -= y*y
- 			addsd 	xmm6, xmm0 ; xtemp += x0
- 			mulsd 	xmm3, xmm2 ; y *= x
- 			addsd 	xmm3, xmm3 ; y *= 2
- 			addsd 	xmm3, xmm1 ; y += y0
- 			movsd 	xmm2, xmm6 ; x = xtemp
- 			inc 	dword iterations ; iter++
-			mov 	eax, 0xffff
- 			
- 			movsd 	xmm6, xmm4 ; x*x
- 			addsd 	xmm6, xmm5 ; x*x + y*y
- 			ucomisd	xmm6, [four] ; compare x*x + y*y with 4.0	
- 			cmovnb	eax, iterations ; if x*x+y*y <= 4 then eax = current iter
- 			cmp 	eax, max_iter
- 			jl 		main_loop
-
- 		mov 	eax, iterations
- 		mov 	edx, eax
- 		and 	eax, pallette_size
- 		mov 	eax, [pallette+eax*4] ;; temporary solution
- 		mov 	esi, 0x000000
- 		cmp 	edx, max_iter
- 		cmove 	eax, esi 
-		mov 	dword [ebx], eax ; load color info of current pixel to the buffer
-		mov 	eax, iterations
-		
-		addsd 	xmm0, x_step ; x coordinate of next point
-		add 	ebx, 4 ; address of next pixel
-		dec 	ecx
-		jnz 	loop_x
-
+main_loop:
+	movsd 	xmm7, x_step
+	movsd 	xmm4, xmm2 ;
+	mulsd 	xmm4, xmm4 ; x*x
+	movsd 	xmm5, xmm3
+	mulsd 	xmm5, xmm5 ; y*y
+	movsd 	xmm6, xmm4 ; xtemp = x*x
+	subsd 	xmm6, xmm5 ; xtemp -= y*y
+	addsd 	xmm6, xmm0 ; xtemp += x0
+	mulsd 	xmm3, xmm2 ; y *= x
+	addsd 	xmm3, xmm3 ; y *= 2
+	addsd 	xmm3, xmm1 ; y += y0
+	movsd 	xmm2, xmm6 ; x = xtemp
+	inc 	dword iterations ; iter++
+	mov 	eax, 0xffff
+	movsd 	xmm6, xmm4 ; x*x
+	addsd 	xmm6, xmm5 ; x*x + y*y
+	ucomisd	xmm6, [four] ; compare x*x + y*y with 4.0	
+	cmovnb	eax, iterations ; if x*x+y*y <= 4 then eax = current iter
+	cmp 	eax, max_iter
+	jl 		main_loop
+	mov 	eax, iterations
+	mov 	edx, eax
+	and 	eax, pallette_size
+	mov 	eax, [pallette+eax*4] ;; temporary solution
+	mov 	esi, 0x000000
+	cmp 	edx, max_iter
+	cmove 	eax, esi 
+	mov 	dword [ebx], eax ; load color info of current pixel to the buffer
+	mov 	eax, iterations
+	addsd 	xmm0, x_step ; x coordinate of next point
+	add 	ebx, 4 ; address of next pixel
+	dec 	ecx
+	jnz 	loop_x
 	subsd 	xmm1, y_step ; y coordinate of next point
 	pop 	ecx
 	dec 	ecx

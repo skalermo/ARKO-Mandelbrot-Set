@@ -6,6 +6,9 @@
 #define DEFAULT_WIDTH 640
 #define DEFAULT_HEIGHT 480
 #define DEFAULT_MAX_ITER 50
+#define X_START -2.0
+#define Y_START 1.0
+#define SCALE_START 1
 #define X_LENGTH 3.0		// length from start x point to end x point on the complex plane
 #define Y_LENGTH 2.0		// length from start y point to end y point on the complex plane
 #define DX X_LENGTH/width 	// x step if scale = 1
@@ -15,6 +18,7 @@
 #define DOWN 2
 #define LEFT 3
 #define RIGHT 4
+#define ITER_DIFF 50
 
 
 void mandelbrot(void*, int, int, int, double, double, double, double);
@@ -27,12 +31,16 @@ void zoom_out();
 void zoom_in();
 void megazoom_out();
 void megazoom_in();
+void inc_iter();
+void dec_iter();
+void back_to_start();
 
 SDL_Surface *screen;
 void * vertical;
 void * horizontal;
 int width, height, max_iter = DEFAULT_MAX_ITER;
-double x_start = -2.0, y_start = 1.0, dx, dy, scale = 1.0, x_start0 = -2.0, y_start0 = 1.0;
+double x_start = X_START, x_start0 = X_START, y_start = Y_START, y_start0 = Y_START, dx, dy;
+unsigned long long scale = SCALE_START;
 
 // Entry point
 int main(int argc, char *argv[]) {
@@ -125,7 +133,19 @@ int main(int argc, char *argv[]) {
 
 					case SDLK_SLASH:
 						megazoom_in();
-					break;					
+					break;
+
+					case SDLK_i:
+						inc_iter();
+					break;
+
+					case SDLK_o:
+						dec_iter();
+					break;
+
+					case SDLK_b:
+						back_to_start();
+					break;
 				}
 				break;
 			case SDL_KEYUP:
@@ -138,9 +158,8 @@ int main(int argc, char *argv[]) {
 			break;
 		}
 		//event.key.keysym.sym = 0;
-		//mandelbrot(screen->pixels, width, height, max_iter, x_start, y_start, dx, dy);
 		SDL_Flip(screen);
-		printf("%lf %lf %lf %lf %lf\n", x_start, y_start, dx, dy, scale);
+		printf("%.25lf %.25lf %.25lf %.25lf %llu\n", x_start, y_start, dx, dy, scale);
 	}
 	SDL_Quit();
 	free (vertical);
@@ -166,21 +185,25 @@ void move_pixels(int movement){
 					Uint8 *target_pixel = (Uint8 *)screen->pixels + j * screen->pitch + i * 4;
 					Uint8 *source_pixel = (Uint8 *)screen->pixels + (j - STEP) * screen->pitch + i * 4;
 	    			*(Uint32 *)target_pixel = *(Uint32 *)source_pixel;
-				}
-					
-					//*((unsigned*)(screen->pixels+i+(j-1)*height)) = *((unsigned*)(screen->pixels+i+j*height));
+				}					
 		break;
 
 		case LEFT:
-			for (int j = 0; j < height; ++j)
-				for (int i = 0; i < width-1; ++i)
-					*((unsigned*)(screen->pixels+i+j*height)) = *((unsigned*)(screen->pixels+i+1+j*height));
+			for (int j = 0; j < height; j++)
+				for (int i = 0; i < width - STEP; i++){
+					Uint8 *target_pixel = (Uint8 *)screen->pixels + j * screen->pitch + i * 4;
+					Uint8 *source_pixel = (Uint8 *)screen->pixels + j * screen->pitch + (i + STEP) * 4;
+	    			*(Uint32 *)target_pixel = *(Uint32 *)source_pixel;
+				}
 		break;
 
 		case RIGHT:
-			for (int j = 0; j < height; ++j)
-				for (int i = 1; i < width; ++i)
-					*((unsigned*)(screen->pixels+i+j*height)) = *((unsigned*)(screen->pixels+i-1+j*height));
+			for (int j = 0; j < height; j++)
+				for (int i = width - 1; i > STEP - 1; i--){
+					Uint8 *target_pixel = (Uint8 *)screen->pixels + j * screen->pitch + i * 4;
+					Uint8 *source_pixel = (Uint8 *)screen->pixels + j * screen->pitch + (i - STEP) * 4;
+	    			*(Uint32 *)target_pixel = *(Uint32 *)source_pixel;
+				}
 		break;
 	};
 	SDL_UnlockSurface(screen);
@@ -189,16 +212,10 @@ void move_pixels(int movement){
 void up(){
 	y_start += STEP * dy;
 	y_start0 += STEP * dy;
-	mandelbrot(horizontal, width, STEP, max_iter, x_start, y_start, dx, dy); //???
-	for (int j = 0; j < STEP; j++)
-		for (int i = 0; i < width; i++){
-			Uint8 *target_pixel = (Uint8 *)screen->pixels + j * screen->pitch + i * 4;
-			*(Uint32 *)target_pixel = *((Uint32*)horizontal + (j * width + i));
-		}
+	mandelbrot(screen->pixels, width, STEP, max_iter, x_start, y_start, dx, dy); //???
 }
 
 void down(){
-
 	y_start0 -= STEP * dy;
 	y_start -= STEP * dy;
 	mandelbrot(horizontal, width, STEP, max_iter, x_start, y_start-dy*(height - STEP), dx, dy); //???
@@ -212,19 +229,29 @@ void down(){
 void left(){
 	x_start -= STEP * dx;
 	x_start0 -= STEP * dx;
-	mandelbrot(screen->pixels, width, height, max_iter, x_start, y_start, dx, dy);
+	mandelbrot(vertical, STEP, height, max_iter, x_start, y_start, dx, dy);
+	for (int j = 0; j < height; j++)
+		for (int i = 0; i < STEP; i++){
+			Uint8 *target_pixel = (Uint8 *)screen->pixels + j * screen->pitch + i * 4;
+			*(Uint32 *)target_pixel = *((Uint32*)vertical + (j * STEP + i));
+		}
 }
 
 void right(){
 	x_start += STEP * dx;
 	x_start0 += STEP * dx;
-	mandelbrot(screen->pixels, width, height, max_iter, x_start, y_start, dx, dy);
+	mandelbrot(vertical, STEP, height, max_iter, x_start + dx * (width - STEP), y_start, dx, dy);
+	for (int j = 0; j < height; j++)
+		for (int i = width - STEP; i < width; i++){
+			Uint8 *target_pixel = (Uint8 *)screen->pixels + j * screen->pitch + i * 4;
+			*(Uint32 *)target_pixel = *((Uint32*)vertical + (j * STEP + i - width + STEP));
+		}
 }
 
 void zoom_out(){
-	scale -= 0.1;
-	if (scale < 0.2)		//???
-		scale = 0.1;
+	scale -= 1;
+	if (scale < 1)		//???
+		scale = 1;
 	dx = DX/scale;
 	dy = DY/scale;														//???
 	x_start = x_start0 + X_LENGTH/2*(1.0-1.0/scale);		//???
@@ -233,7 +260,7 @@ void zoom_out(){
 }
 
 void zoom_in(){
-	scale += 0.1;
+	scale += 1;
 	dx = DX/scale;
 	dy = DY/scale;
 
@@ -244,9 +271,9 @@ void zoom_in(){
 }
 
 void megazoom_out(){
-	scale /= 2;
-	if (scale < 0.2)
-		scale = 0.1;
+	scale >>= 1;
+	if (scale < 1)
+		scale = 1;
 	dx = DX/scale;
 	dy = DY/scale;
 
@@ -256,11 +283,34 @@ void megazoom_out(){
 }
 
 void megazoom_in(){
-	scale *= 2;
+	scale <<= 1;
+	// if (scale > 0x4000000000)
+	// 	scale = 0x4000000000;
 	dx = DX/scale;
 	dy = DY/scale;
 
 	x_start = x_start0 + X_LENGTH/2*(1.0-1.0/scale);
 	y_start = y_start0 - Y_LENGTH/2*(1.0-1.0/scale);
+	mandelbrot(screen->pixels, width, height, max_iter, x_start, y_start, dx, dy);
+}
+
+void inc_iter(){
+	max_iter += ITER_DIFF;
+	mandelbrot(screen->pixels, width, height, max_iter, x_start, y_start, dx, dy);
+}
+
+void dec_iter(){
+	max_iter -= ITER_DIFF;
+	if (max_iter <= 0)
+		max_iter = 50;
+	mandelbrot(screen->pixels, width, height, max_iter, x_start, y_start, dx, dy);
+}
+
+void back_to_start(){
+	x_start = x_start0 = X_START;
+	y_start = y_start0 = Y_START;
+	scale = SCALE_START;
+	dx = DX;
+	dy = DY;
 	mandelbrot(screen->pixels, width, height, max_iter, x_start, y_start, dx, dy);
 }
