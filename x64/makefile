@@ -1,6 +1,6 @@
 all: out
 out: main.o mandelbrot.o
-	gcc -m64 -g -o out main.o mandelbrot.o -lSDL
+	gcc -no-pie -m64 -g -o out main.o mandelbrot.o -lSDL
 
 main.o: main.c
 	gcc -m64 -g -c -o main.o main.c -lSDL
