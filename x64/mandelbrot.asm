@@ -25,8 +25,6 @@ global  mandelbrot
 	
 	%define 	pallette_size 	15
 
-	%define 	y_step 		[rbp+24] ; double
-	%define 	x_step 		[rbp+16] ; double
 	%define 	x_start 	[rbp-8] ; double
 	%define 	max_iter 	rcx ; int
 	%define 	height 		rdx ; int
